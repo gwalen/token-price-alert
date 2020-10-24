@@ -1,0 +1,90 @@
+import React, { useEffect } from 'react'
+import './App.css'
+import { ApolloClient } from 'apollo-client'
+import { InMemoryCache } from 'apollo-cache-inmemory'
+import { HttpLink } from 'apollo-link-http'
+import { useQuery } from '@apollo/react-hooks'
+import gql from 'graphql-tag'
+import uniswapLogo from '../uniswap-logo.png'
+import daiLogo from '../dai-logo.png'
+
+export const client = new ApolloClient({
+  link: new HttpLink({
+    uri: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2'
+  }),
+  fetchOptions: {
+    mode: 'no-cors'
+  },
+  cache: new InMemoryCache()
+})
+
+const DAI_QUERY = gql`
+  query tokens($tokenAddress: Bytes!) {
+    tokens(where: {id: $tokenAddress}) {
+      derivedETH
+      totalLiquidity
+    }
+  }
+`
+
+const MULTI_TOKEN_QUERY = gql`
+  query tokens($tokenAddresses: [Bytes]!) {
+    tokens(where: {id_in: $tokenAddresses }) {
+      derivedETH
+      totalLiquidity
+    }
+  }
+`
+
+
+const ETH_PRICE_QUERY = gql`
+  query bundles {
+    bundles(where: {id: "1"}) {
+      ethPrice
+    }
+  }
+`
+
+
+function App() {
+  const { loading: ethLoading, data: ethPriceData } = useQuery(ETH_PRICE_QUERY)
+  const { loading: daiLoading, data: daiData } = useQuery(DAI_QUERY, {
+    variables:  {
+      tokenAddress: '0x6b175474e89094c44da98b954eedeac495271d0f'
+    }
+  })
+
+  const { loading: multiTokensLoading, data: multiTokensData } = useQuery(MULTI_TOKEN_QUERY, {
+    variables:  {
+      tokenAddresses: ['0x6b175474e89094c44da98b954eedeac495271d0f']
+    }
+  })
+
+  const daiPriceInEth = daiData && daiData.tokens[0].derivedETH
+  // const daiPriceInEth = multiTokensData && multiTokensData.tokens[0].derivedETH
+  const daiLiquidity = daiData && daiData.tokens[0].totalLiquidity
+  const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
+
+  return (
+    <div>
+      <div className="content mr-auto ml-auto">
+        <div>
+          Dai price:{' '}
+          { ethLoading || daiLoading
+              ? 'Loading data..'
+              : '$' + (parseFloat(ethPriceInUsd) * parseFloat(daiPriceInEth)).toFixed(2)
+          }
+        </div>
+        <div>
+          Dai total liquidity:{' '}
+          { daiLoading
+              ? 'Loading data..'
+              : 'as float ' + parseFloat(daiLiquidity).toFixed(0) + ', un parsed: ' + daiLiquidity
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App
