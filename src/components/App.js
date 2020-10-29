@@ -5,8 +5,7 @@ import { InMemoryCache } from 'apollo-cache-inmemory'
 import { HttpLink } from 'apollo-link-http'
 import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
-import uniswapLogo from '../uniswap-logo.png'
-import daiLogo from '../dai-logo.png'
+import tokenJson from '../data/tokens.json'
 
 export const client = new ApolloClient({
   link: new HttpLink({
@@ -45,6 +44,10 @@ const ETH_PRICE_QUERY = gql`
   }
 `
 
+const tokenAddresses = tokenJson.map(tokenInfo => tokenInfo.address)
+
+//TODO: is state (useState) shared among components or just local to component ?
+// why would I useState instead of defining a variable out of component like tokenAddresses above ?
 
 function App() {
 
@@ -55,14 +58,11 @@ function App() {
     }
   })
 
+  console.log('tokenAddresses: ', tokenAddresses)
 
   const { loading: multiTokensLoading, data: multiTokensData } = useQuery(MULTI_TOKEN_QUERY, {
     variables:  {
-      tokenAddresses: [
-        '0x6b175474e89094c44da98b954eedeac495271d0f',   //DAI
-        '0x250a3500f48666561386832f1f1f1019b89a2699',   //SAFE2
-        '0x26ce25148832c04f3d7f26f32478a9fe55197166'    //DEXT
-      ]
+      tokenAddresses: tokenAddresses
     },
     pollInterval: 3000
   })
