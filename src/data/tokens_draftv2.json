@@ -3,7 +3,7 @@
     "name": "DAI",
     "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
     "alerts": [
-      { "type": ">", "value": 1.001, "completed": false },
+      { "type": ">", "value": 1.001, "completed": true },
       { "type": "<", "value": 1.002, "completed": false }
     ]
   },

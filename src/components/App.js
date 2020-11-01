@@ -1,11 +1,20 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import './App.css'
+
+
+import PerfectScrollbar from 'perfect-scrollbar';
+
 import { ApolloClient } from 'apollo-client'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { HttpLink } from 'apollo-link-http'
 import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
-import tokenJson from '../data/tokens.json'
+// import tokenJson from '../data/tokens.json'
+import tokenJson from '../data/tokens_draftv2.json'
+
+import { Card, CardHeader, CardImg, CardBody, CardTitle, CardText, Row, Col } from 'reactstrap';
+import {Table} from "reactstrap";
+
 
 export const client = new ApolloClient({
   link: new HttpLink({
@@ -29,6 +38,7 @@ const DAI_QUERY = gql`
 const MULTI_TOKEN_QUERY = gql`
   query tokens($tokenAddresses: [Bytes]!) {
     tokens(where: {id_in: $tokenAddresses }) {
+      id
       name
       derivedETH
     }
@@ -46,10 +56,12 @@ const ETH_PRICE_QUERY = gql`
 
 const tokenAddresses = tokenJson.map(tokenInfo => tokenInfo.address)
 
-//TODO: is state (useState) shared among components or just local to component ?
-// why would I useState instead of defining a variable out of component like tokenAddresses above ?
+// TODO clear; devDependencies
+// should I use gulp or webpack?
 
 function App() {
+
+  const refreshCounter = useRef(-1)
 
   const { loading: ethLoading, data: ethPriceData } = useQuery(ETH_PRICE_QUERY, { pollInterval: 3000 })
   const { loading: daiLoading, data: daiData } = useQuery(DAI_QUERY, {
@@ -58,51 +70,99 @@ function App() {
     }
   })
 
-  console.log('tokenAddresses: ', tokenAddresses)
-
   const { loading: multiTokensLoading, data: multiTokensData } = useQuery(MULTI_TOKEN_QUERY, {
     variables:  {
       tokenAddresses: tokenAddresses
     },
-    pollInterval: 3000
+    pollInterval: 30000
   })
+
+  refreshCounter.current++;
 
   const daiPriceInEth = daiData && daiData.tokens[0].derivedETH
   const tokens = multiTokensData && multiTokensData.tokens
   const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
 
-  // setCurrentTokenData({ tokensLoading: multiTokensLoading, tokensData: tokens })
-  // console.log("initial currentTokenData: ", currentTokenData)
   console.log('tokenData ', tokens)
+
+  function printAlert(alert) {
+    return (
+      <div style={{color: alert.type === '>' ? 'green' : 'red', float: 'left'}}>
+        { alert.completed
+            ? <b><s>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}&nbsp;&nbsp;</s></b>
+            : <b>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}&nbsp;&nbsp;</b>
+        }
+      </div>
+    )
+  }
+
+  function findAlerts(tokenAddress) {
+    console.log('find alerts for address: ', tokenAddress)
+    return tokenJson
+      .filter(tokenInfo => tokenInfo.address === tokenAddress)
+      .map(tokenInfo => {
+        // console.log('fund token : ', tokenInfo.address)
+        // console.log('fund token alerts : ', tokenInfo.alerts)
+        tokenInfo.alerts.map(alert => console.log('alert : ', alert))
+        // const alertsHtml = tokenInfo.alerts.map(alert => <div style={{color: alert.type === '>' ? "green" : "red" }}>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}</div>)
+        const alertsHtml = tokenInfo.alerts.map(alert => printAlert(alert))
+        // console.log('alertsHtml : ', alertsHtml)
+
+        return alertsHtml
+      })
+  }
 
   function generateTokenInfo() {
     // console.log("generateTokenInfo currentTokenData: ", currentTokenData)
     return tokens.map((token) => {
-      return <div>
-        {token.name} price:{' '}
-        {(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}
-        {'  | '}eth price : {parseFloat(token.derivedETH).toFixed(6)}
-      </div>
+      return (
+        <>
+        <tr>
+          <td>{token.name}</td>
+          <td>{(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}</td>
+          <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
+        </tr>
+        <tr>
+          <td>Alerts</td><td colSpan="2">{findAlerts(token.id)}</td>
+        </tr>
+        </>
+      )
     })
   }
 
 
   return (
-    <div>
-      <div className="content mr-auto ml-auto">
-        <div>
-          Dai price:{' '}
-          { ethLoading || daiLoading
-              ? 'Loading data..'
-              : '$' + (parseFloat(ethPriceInUsd) * parseFloat(daiPriceInEth)).toFixed(2)
-          }
-        </div>
-        { multiTokensLoading
-            ?  "Lading multi-tokens.."
-            :  generateTokenInfo()
-        }
+      <div className="content" style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#f4f3ef"
+      }}>
+        <Row>
+          <Col md="12">
+            <Card  style={{ width: '48rem' }}>
+              <CardHeader>Tokens{'  ||  refresh count: '}{refreshCounter.current}</CardHeader>
+              <CardBody>
+                <Table responsive>
+                  <thead className="text-primary">
+                    <tr>
+                      <th>Token name</th>
+                      <th>Token price USD</th>
+                      <th>Token price ETH</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    { multiTokensLoading
+                        ?  <tr><td>"Lading multi-tokens.."</td></tr>
+                        :  generateTokenInfo()
+                    }
+                  </tbody>
+                </Table>
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
       </div>
-    </div>
   );
 }
 
