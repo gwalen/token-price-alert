@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import './App.css'
 
-
-import PerfectScrollbar from 'perfect-scrollbar';
-
 import { ApolloClient } from 'apollo-client'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { HttpLink } from 'apollo-link-http'
@@ -12,8 +9,8 @@ import gql from 'graphql-tag'
 // import tokenJson from '../data/tokens.json'
 import tokenJson from '../data/tokens_draftv2.json'
 
-import { Card, CardHeader, CardImg, CardBody, CardTitle, CardText, Row, Col } from 'reactstrap';
-import {Table} from "reactstrap";
+import { Card, CardHeader, CardBody, Row, Col, Table } from 'reactstrap'
+import { TelegramClient } from 'messaging-api-telegram'
 
 
 export const client = new ApolloClient({
@@ -54,7 +51,24 @@ const ETH_PRICE_QUERY = gql`
   }
 `
 
-//TODO move to useRef
+const dexToolsLink = 'https://www.dextools.io/app/uniswap/pair-explorer/'
+
+//TODO: move to environment vars
+const chatId =-419695018
+const telegramClient = new TelegramClient({
+  accessToken: '1391851877:AAHPd3W7_tgLoCZ3i-sG8fbXZew_rmBD5Rw',
+})
+
+//TODO: move to some sort of initialization function or hook (useEffect ?)
+telegramClient.getWebhookInfo().catch((error) => {
+  console.log(error) // formatted error message
+  console.log(error.stack) // error stack trace
+  console.log(error.config) // axios request config
+  console.log(error.request) // HTTP request
+  console.log(error.response) // HTTP response
+});
+
+//TODO move to useRef or this kind of global declaration if also ok ?
 const tokenAddresses = tokenJson.map(tokenInfo => tokenInfo.address)
 
 // TODO clear; devDependencies
@@ -88,14 +102,25 @@ function App() {
 
   /**** functions ****/
 
+  function sendTelegramMessage(message) {
+    telegramClient.sendMessage(chatId, message).then(() => {
+      console.log('message sent', message);
+    });
+  }
+
+  function findDexToolsLink(tokenAddress) {
+    const { dexToolsLinkSuffix: linkSuffix } = tokenJson.find(tokenInfo => tokenInfo.address === tokenAddress)
+    return `${dexToolsLink}${linkSuffix}`
+  }
+
   function checkAlert(token) {
-    const { alerts: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id) //.map(tokenInfo => tokenInfo.alerts)
+    const { alerts: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
     if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return false }
 
     console.log('checkAlert : tokenInfo : ', tokenJson.find(tokenInfo => tokenInfo.address === token.id))
     console.log('checkAlert : token alerts : ', tokenAlerts)
     const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
-    console.log('checkAlert : First incomplete alter : ', firstIncompleteAlert)
+    console.log('checkAlert : First incomplete alert : ', firstIncompleteAlert)
     if(firstIncompleteAlert) { //if there is incomplete alert
       const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
       console.log('checkAlert : usdToken price : ', usdTokenPrice)
@@ -108,16 +133,15 @@ function App() {
   function updateAlerts() {
     if(multiTokensLoading || ethLoading) console.log('update tokens waiting for tokens to load', tokens)
     else {
-      console.log('update tokens :', tokens)
+      // console.log('update tokens :', tokens)
       tokens.forEach(token => {
         const [isAlertActive, tokenAlert] = checkAlert(token)
-
-        // if (checkAlert(token)) {
         if (isAlertActive) {
-          console.log('alert for token ', token.name)
+          const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
+          const msg = `Token alert: ${token.name} ${tokenAlert.type} ${tokenAlert.value}, price: ${usdTokenPrice}`
+          console.log(msg)
+          sendTelegramMessage(msg)
           tokenAlert.completed = true
-          console.log('alert for token value ', tokenAlert)
-
         }
       })
     }
@@ -127,8 +151,8 @@ function App() {
     return (
       <div style={{color: alert.type === '>' ? 'green' : 'red', float: 'left'}}>
         { alert.completed
-            ? <b><s>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}&nbsp;&nbsp;</s></b>
-            : <b>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}&nbsp;&nbsp;</b>
+            ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
+            : <b>{alert.value}&nbsp;&nbsp;</b>
         }
       </div>
     )
@@ -151,9 +175,10 @@ function App() {
           <td>{token.name}</td>
           <td>{(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}</td>
           <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
+          <td><a href={`${findDexToolsLink(token.id)}`} target="_blank"><b>dex</b></a></td>
         </tr>
         <tr>
-          <td>Alerts</td><td colSpan="2">{printAlerts(token.id)}</td>
+          <td>Alerts</td><td colSpan="3">{printAlerts(token.id)}</td>
         </tr>
         </>
       )
@@ -180,6 +205,7 @@ function App() {
                       <th>Token name</th>
                       <th>Token price USD</th>
                       <th>Token price ETH</th>
+                      <th>Link to dexTools</th>
                     </tr>
                   </thead>
                   <tbody>
