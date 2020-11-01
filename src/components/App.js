@@ -54,6 +54,7 @@ const ETH_PRICE_QUERY = gql`
   }
 `
 
+//TODO move to useRef
 const tokenAddresses = tokenJson.map(tokenInfo => tokenInfo.address)
 
 // TODO clear; devDependencies
@@ -77,13 +78,50 @@ function App() {
     pollInterval: 30000
   })
 
-  refreshCounter.current++;
-
   const daiPriceInEth = daiData && daiData.tokens[0].derivedETH
   const tokens = multiTokensData && multiTokensData.tokens
   const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
 
   console.log('tokenData ', tokens)
+  refreshCounter.current++
+  updateAlerts()
+
+  /**** functions ****/
+
+  function checkAlert(token) {
+    const { alerts: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id) //.map(tokenInfo => tokenInfo.alerts)
+    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return false }
+
+    console.log('checkAlert : tokenInfo : ', tokenJson.find(tokenInfo => tokenInfo.address === token.id))
+    console.log('checkAlert : token alerts : ', tokenAlerts)
+    const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
+    console.log('checkAlert : First incomplete alter : ', firstIncompleteAlert)
+    if(firstIncompleteAlert) { //if there is incomplete alert
+      const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
+      console.log('checkAlert : usdToken price : ', usdTokenPrice)
+      if(firstIncompleteAlert.type === '>' && usdTokenPrice >= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+      if(firstIncompleteAlert.type === '<' && usdTokenPrice <= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+    }
+    return [false, null]
+  }
+
+  function updateAlerts() {
+    if(multiTokensLoading || ethLoading) console.log('update tokens waiting for tokens to load', tokens)
+    else {
+      console.log('update tokens :', tokens)
+      tokens.forEach(token => {
+        const [isAlertActive, tokenAlert] = checkAlert(token)
+
+        // if (checkAlert(token)) {
+        if (isAlertActive) {
+          console.log('alert for token ', token.name)
+          tokenAlert.completed = true
+          console.log('alert for token value ', tokenAlert)
+
+        }
+      })
+    }
+  }
 
   function printAlert(alert) {
     return (
@@ -96,24 +134,16 @@ function App() {
     )
   }
 
-  function findAlerts(tokenAddress) {
-    console.log('find alerts for address: ', tokenAddress)
+  function printAlerts(tokenAddress) {
     return tokenJson
-      .filter(tokenInfo => tokenInfo.address === tokenAddress)
+      .filter(tokenInfo => tokenInfo.address === tokenAddress)  //TODO: find nie filter bo filter zwraca tablice
       .map(tokenInfo => {
-        // console.log('fund token : ', tokenInfo.address)
-        // console.log('fund token alerts : ', tokenInfo.alerts)
-        tokenInfo.alerts.map(alert => console.log('alert : ', alert))
-        // const alertsHtml = tokenInfo.alerts.map(alert => <div style={{color: alert.type === '>' ? "green" : "red" }}>{alert.type}{' -- '}{alert.value}{' -- '}{String(alert.completed)}</div>)
-        const alertsHtml = tokenInfo.alerts.map(alert => printAlert(alert))
-        // console.log('alertsHtml : ', alertsHtml)
-
-        return alertsHtml
+        // tokenInfo.alerts.map(alert => console.log('alert : ', alert))
+        return tokenInfo.alerts.map(alert => printAlert(alert))
       })
   }
 
   function generateTokenInfo() {
-    // console.log("generateTokenInfo currentTokenData: ", currentTokenData)
     return tokens.map((token) => {
       return (
         <>
@@ -123,13 +153,14 @@ function App() {
           <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
         </tr>
         <tr>
-          <td>Alerts</td><td colSpan="2">{findAlerts(token.id)}</td>
+          <td>Alerts</td><td colSpan="2">{printAlerts(token.id)}</td>
         </tr>
         </>
       )
     })
   }
 
+  /******** render ********/
 
   return (
       <div className="content" style={{
@@ -141,7 +172,7 @@ function App() {
         <Row>
           <Col md="12">
             <Card  style={{ width: '48rem' }}>
-              <CardHeader>Tokens{'  ||  refresh count: '}{refreshCounter.current}</CardHeader>
+              <CardHeader>Tokens<div style={{float: 'right'}}>Refresh count : {refreshCounter.current}</div></CardHeader>
               <CardBody>
                 <Table responsive>
                   <thead className="text-primary">

@@ -4,7 +4,7 @@
     "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
     "alerts": [
       { "type": ">", "value": 1.001, "completed": true },
-      { "type": "<", "value": 1.002, "completed": false }
+      { "type": "<", "value": 1.1, "completed": false }
     ]
   },
   {
@@ -12,6 +12,7 @@
     "address": "0x250a3500f48666561386832f1f1f1019b89a2699",
     "alerts": [
       { "type": ">", "value": 181.001, "completed": false },
+      { "type": ">", "value": 211.001, "completed": false },
       { "type": "<", "value": 165.002, "completed": false }
     ]
   },
