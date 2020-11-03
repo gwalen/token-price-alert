@@ -7,7 +7,7 @@ import { HttpLink } from 'apollo-link-http'
 import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
 // import tokenJson from '../data/tokens.json'
-import tokenJson from '../data/tokens_draftv2.json'
+import tokenJson from '../data/tokens.json'
 
 import { Card, CardHeader, CardBody, Row, Col, Table } from 'reactstrap'
 import { TelegramClient } from 'messaging-api-telegram'
@@ -22,15 +22,6 @@ export const client = new ApolloClient({
   },
   cache: new InMemoryCache()
 })
-
-const DAI_QUERY = gql`
-  query tokens($tokenAddress: Bytes!) {
-    tokens(where: {id: $tokenAddress}) {
-      derivedETH
-      totalLiquidity
-    }
-  }
-`
 
 const MULTI_TOKEN_QUERY = gql`
   query tokens($tokenAddresses: [Bytes]!) {
@@ -79,11 +70,6 @@ function App() {
   const refreshCounter = useRef(-1)
 
   const { loading: ethLoading, data: ethPriceData } = useQuery(ETH_PRICE_QUERY, { pollInterval: 3000 })
-  const { loading: daiLoading, data: daiData } = useQuery(DAI_QUERY, {
-    variables:  {
-      tokenAddress: '0x6b175474e89094c44da98b954eedeac495271d0f'
-    }
-  })
 
   const { loading: multiTokensLoading, data: multiTokensData } = useQuery(MULTI_TOKEN_QUERY, {
     variables:  {
@@ -92,7 +78,6 @@ function App() {
     pollInterval: 30000
   })
 
-  const daiPriceInEth = daiData && daiData.tokens[0].derivedETH
   const tokens = multiTokensData && multiTokensData.tokens
   const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
 
@@ -117,13 +102,10 @@ function App() {
     const { alerts: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
     if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return false }
 
-    console.log('checkAlert : tokenInfo : ', tokenJson.find(tokenInfo => tokenInfo.address === token.id))
-    console.log('checkAlert : token alerts : ', tokenAlerts)
     const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
-    console.log('checkAlert : First incomplete alert : ', firstIncompleteAlert)
-    if(firstIncompleteAlert) { //if there is incomplete alert
+    if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
       const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-      console.log('checkAlert : usdToken price : ', usdTokenPrice)
+      console.log(`checkAlert : First incomplete alert : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
       if(firstIncompleteAlert.type === '>' && usdTokenPrice >= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
       if(firstIncompleteAlert.type === '<' && usdTokenPrice <= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
     }
@@ -133,7 +115,6 @@ function App() {
   function updateAlerts() {
     if(multiTokensLoading || ethLoading) console.log('update tokens waiting for tokens to load', tokens)
     else {
-      // console.log('update tokens :', tokens)
       tokens.forEach(token => {
         const [isAlertActive, tokenAlert] = checkAlert(token)
         if (isAlertActive) {
@@ -160,11 +141,8 @@ function App() {
 
   function printAlerts(tokenAddress) {
     return tokenJson
-      .filter(tokenInfo => tokenInfo.address === tokenAddress)  //TODO: find nie filter bo filter zwraca tablice
-      .map(tokenInfo => {
-        // tokenInfo.alerts.map(alert => console.log('alert : ', alert))
-        return tokenInfo.alerts.map(alert => printAlert(alert))
-      })
+      .filter(tokenInfo => tokenInfo.address === tokenAddress)  //TODO: find would be better coz filter returns an array (hence double map below)
+      .map(tokenInfo => tokenInfo.alerts.map(alert => printAlert(alert)))
   }
 
   function generateTokenInfo() {
