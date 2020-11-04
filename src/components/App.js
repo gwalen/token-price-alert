@@ -149,15 +149,13 @@ function App() {
     return tokens.map((token) => {
       return (
         <>
-        <tr>
-          <td>{token.name}</td>
-          <td>{(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}</td>
-          <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
-          <td><a href={`${findDexToolsLink(token.id)}`} target="_blank"><b>dex</b></a></td>
-        </tr>
-        <tr>
-          <td>Alerts</td><td colSpan="3">{printAlerts(token.id)}</td>
-        </tr>
+          <tr>
+            <td>{token.name}</td>
+            <td><b>{(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}</b></td>
+            <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
+            <td>{printAlerts(token.id)}</td>
+            <td><a href={`${findDexToolsLink(token.id)}`} target="_blank"><b>dex</b></a></td>
+          </tr>
         </>
       )
     })
@@ -174,8 +172,12 @@ function App() {
       }}>
         <Row>
           <Col md="12">
-            <Card  style={{ width: '48rem' }}>
-              <CardHeader>Tokens<div style={{float: 'right'}}>Refresh count : {refreshCounter.current}</div></CardHeader>
+            <Card  style={{ width: '68rem' }}>
+              <CardHeader>
+                <div style={{float: 'left', marginRight: '0.8rem'}}>Tokens</div>
+                <div style={{float: 'right', marginLeft: '0.8rem'}}>Refresh count : {refreshCounter.current}</div>
+                <div style={{float: 'right', marginRight: '0.8rem'}}><b>Eth price : {parseFloat(ethPriceInUsd).toFixed(2)}</b></div>
+              </CardHeader>
               <CardBody>
                 <Table responsive>
                   <thead className="text-primary">
@@ -183,7 +185,8 @@ function App() {
                       <th>Token name</th>
                       <th>Token price USD</th>
                       <th>Token price ETH</th>
-                      <th>Link to dexTools</th>
+                      <th>Token alerts</th>
+                      <th>dexTools</th>
                     </tr>
                   </thead>
                   <tbody>
