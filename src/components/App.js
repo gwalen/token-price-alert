@@ -7,7 +7,7 @@ import { HttpLink } from 'apollo-link-http'
 import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
 // import tokenJson from '../data/tokens.json'
-import tokenJson from '../data/tokens.json'
+import tokenJson from '../data/tokens_draft_v3.json'
 
 import { Card, CardHeader, CardBody, Row, Col, Table } from 'reactstrap'
 import { TelegramClient } from 'messaging-api-telegram'
@@ -112,25 +112,59 @@ function App() {
     return [false, null]
   }
 
+  function checkAlertUp(token) {
+    const { alertsUp: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
+    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return [false, null] }
+
+    const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
+    if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
+      const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
+      console.log(`checkAlert : First incomplete alert UP : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
+      if(usdTokenPrice >= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+    }
+    return [false, null]
+  }
+
+  function checkAlertDown(token) {
+    const { alertsDown: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
+    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return [false, null] }
+
+    const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
+    if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
+      const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
+      console.log(`checkAlert : First incomplete alert DOWN : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
+      if(usdTokenPrice <= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+    }
+    return [false, null]
+  }
+
   function updateAlerts() {
     if(multiTokensLoading || ethLoading) console.log('update tokens waiting for tokens to load', tokens)
     else {
       tokens.forEach(token => {
-        const [isAlertActive, tokenAlert] = checkAlert(token)
-        if (isAlertActive) {
+        const [isAlertActiveUp, tokenAlertUp] = checkAlertUp(token)
+        const [isAlertActiveDown, tokenAlertDown] = checkAlertDown(token)
+        if (isAlertActiveUp) {
           const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-          const msg = `Token alert: ${token.name} ${tokenAlert.type} ${tokenAlert.value}, price: ${usdTokenPrice}`
+          const msg = `Token alert: ${token.name} ${tokenAlertUp.type} ${tokenAlertUp.value}, price: ${usdTokenPrice}`
           console.log(msg)
           sendTelegramMessage(msg)
-          tokenAlert.completed = true
+          tokenAlertUp.completed = true
+        }
+        if (isAlertActiveDown) {
+          const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
+          const msg = `Token alert: ${token.name} ${tokenAlertDown.type} ${tokenAlertDown.value}, price: ${usdTokenPrice}`
+          console.log(msg)
+          sendTelegramMessage(msg)
+          tokenAlertDown.completed = true
         }
       })
     }
   }
 
-  function printAlert(alert) {
+  function printAlertUp(alert) {
     return (
-      <div style={{color: alert.type === '>' ? 'green' : 'red', float: 'left'}}>
+      <div style={{color: 'green', float: 'left'}}>
         { alert.completed
             ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
             : <b>{alert.value}&nbsp;&nbsp;</b>
@@ -139,10 +173,38 @@ function App() {
     )
   }
 
+  function printAlertDown(alert) {
+    return (
+        <div style={{color: 'red', float: 'left'}}>
+          { alert.completed
+              ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
+              : <b>{alert.value}&nbsp;&nbsp;</b>
+          }
+        </div>
+    )
+  }
+
   function printAlerts(tokenAddress) {
     return tokenJson
       .filter(tokenInfo => tokenInfo.address === tokenAddress)  //TODO: find would be better coz filter returns an array (hence double map below)
-      .map(tokenInfo => tokenInfo.alerts.map(alert => printAlert(alert)))
+      .map(tokenInfo => {
+        return(
+          <>
+            {
+              tokenInfo.alertsUp.map(alert => {
+                console.log(`print alert for token: ${tokenInfo.name}, value ${alert.value}  completed : ${alert.completed}`)
+                return printAlertUp(alert)
+              })
+            }
+            {
+              tokenInfo.alertsDown.map(alert => {
+                console.log(`print alert for token: ${tokenInfo.name}, value ${alert.value}  completed : ${alert.completed}`)
+                return printAlertDown(alert)
+              })
+            }
+          </>
+        )
+      })
   }
 
   function generateTokenInfo() {

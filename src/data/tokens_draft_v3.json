@@ -3,7 +3,8 @@
     "name": "DAI",
     "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
     "dexToolsLinkSuffix": "",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "SAFE2",
@@ -26,42 +27,49 @@
     "alertsUp": [
       { "value": 0.075, "completed": false },
       { "value": 0.080, "completed": false }
-    ]
+    ],
+    "alertsDown": []
   },
   {
     "name": "AAVE",
     "address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
     "dexToolsLinkSuffix": "0xdfc14d2af169b0d36c4eff567ada9b2e0cae044f",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "ASTRO",
     "address": "0xcbd55d4ffc43467142761a764763652b48b969ff",
     "dexToolsLinkSuffix": "0x7df4a1d4a8d8390bef36f311252423cce04e5647",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "FARM",
     "address": "0xa0246c9032bc3a600820415ae600c6388619a14d",
     "dexToolsLinkSuffix": "0x56feaccb7f750b997b36a68625c7c596f0b41a58",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "PRQ",
     "address": "0x362bc847a3a9637d3af6624eec853618a43ed7d2",
     "dexToolsLinkSuffix": "0x362bc847a3a9637d3af6624eec853618a43ed7d2",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "UNI",
     "address": "0x362bc847a3a9637d3af6624eec853618a43ed7d2",
     "dexToolsLinkSuffix": "0xd3d2e2692501a5c9ca623199d38826e513033a17",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   },
   {
     "name": "YFI",
     "address": "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
     "dexToolsLinkSuffix": "0x2fdbadf3c4d5a8666bc06645b8358ab803996e28",
-    "alerts": []
+    "alertsUp": [],
+    "alertsDown": []
   }
 ]
