@@ -7,9 +7,13 @@ import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
 import { Card, CardHeader, CardBody, Row, Col } from 'reactstrap'
 import { TelegramClient } from 'messaging-api-telegram'
+import useSound from 'use-sound';
 
 import { AlertTable} from './AlertTable'
+
 import tokenJson from '../data/tokens.json'
+import upSound from '../assets/sounds/success.mp3'
+import downSound from '../assets/sounds/failure.mp3'
 
 
 export const client = new ApolloClient({
@@ -55,12 +59,16 @@ telegramClient.getWebhookInfo().catch((error) => {
 //TODO move to useRef or this kind of global declaration if also ok ?
 const tokenAddresses = tokenJson.map(tokenInfo => tokenInfo.address)
 
+const soundPlayer = process.env.REACT_APP_PLAY_SOUND
+
 // TODO clear; devDependencies
 // should I use gulp or webpack?
 
 function App() {
 
   const refreshCounter = useRef(-1)
+  const [playUpSound] = useSound(upSound);
+  const [playDownSound] = useSound(downSound);
 
   const { loading: ethLoading, data: ethPriceData } = useQuery(ETH_PRICE_QUERY, { pollInterval: 3000 })
 
@@ -74,7 +82,6 @@ function App() {
   const tokens = multiTokensData && multiTokensData.tokens
   const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
 
-  // console.log('tokenData ', tokens)
   refreshCounter.current++
   updateAlerts()
 
@@ -110,12 +117,13 @@ function App() {
     return checkAlert(token, tokenAlerts, isDown, "DOWN")
   }
 
-  function alertOnChange(token, isAlertActive, tokenAlert, alertType) {
+  function alertOnChange(token, isAlertActive, tokenAlert, alertType, playSound) {
     if (isAlertActive) {
       const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
       const msg = `Token alert: ${token.name} ${alertType} ${tokenAlert.value}$, price: ${usdTokenPrice}$`
       console.log(msg)
       sendTelegramMessage(msg)
+      if(soundPlayer === 'on') playSound()
       tokenAlert.completed = true
     }
   }
@@ -126,8 +134,8 @@ function App() {
       tokens.forEach(token => {
         const [isAlertActiveUp, tokenAlertUp] = checkAlertUp(token)
         const [isAlertActiveDown, tokenAlertDown] = checkAlertDown(token)
-        alertOnChange(token, isAlertActiveUp, tokenAlertUp, 'UP')
-        alertOnChange(token, isAlertActiveDown, tokenAlertDown, 'DOWN')
+        alertOnChange(token, isAlertActiveUp, tokenAlertUp, 'UP', playUpSound)
+        alertOnChange(token, isAlertActiveDown, tokenAlertDown, 'DOWN', playDownSound)
       })
     }
   }
