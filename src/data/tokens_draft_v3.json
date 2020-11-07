@@ -11,7 +11,7 @@
     "address": "0x250a3500f48666561386832f1f1f1019b89a2699",
     "dexToolsLinkSuffix": "0xaf0e926ccb8de48731d9b09870a86d74041562c0",
     "alertsUp": [
-      { "value": 200.000, "completed": false },
+      { "value": 160.000, "completed": false },
       { "value": 220.00, "completed": false },
       { "value": 250.00, "completed": false }
     ],
@@ -28,7 +28,9 @@
       { "value": 0.075, "completed": false },
       { "value": 0.080, "completed": false }
     ],
-    "alertsDown": []
+    "alertsDown": [
+      { "value": 0.640, "completed": false }
+    ]
   },
   {
     "name": "AAVE",

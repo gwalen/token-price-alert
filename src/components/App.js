@@ -98,44 +98,38 @@ function App() {
     return `${dexToolsLink}${linkSuffix}`
   }
 
-  function checkAlert(token) {
-    const { alerts: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
-    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return false }
+  function checkAlert(token, tokenAlerts, compareFunc, alertType) {
+    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return [false, null] }
 
     const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
     if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
       const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-      console.log(`checkAlert : First incomplete alert : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
-      if(firstIncompleteAlert.type === '>' && usdTokenPrice >= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
-      if(firstIncompleteAlert.type === '<' && usdTokenPrice <= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+      console.log(`checkAlert : First incomplete alert ${alertType} : ${firstIncompleteAlert.value} for token ${token.name}, with current price: ${usdTokenPrice}`)
+      if(compareFunc(usdTokenPrice, parseFloat(firstIncompleteAlert.value))) return [true, firstIncompleteAlert]
     }
     return [false, null]
   }
 
   function checkAlertUp(token) {
     const { alertsUp: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
-    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return [false, null] }
-
-    const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
-    if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
-      const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-      console.log(`checkAlert : First incomplete alert UP : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
-      if(usdTokenPrice >= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
-    }
-    return [false, null]
+    const isUp = (priceOne, priceTwo) => priceOne >= priceTwo
+    return checkAlert(token, tokenAlerts, isUp, "UP")
   }
 
   function checkAlertDown(token) {
     const { alertsDown: tokenAlerts } = tokenJson.find(tokenInfo => tokenInfo.address === token.id)
-    if(!tokenAlerts) { console.log('Token not found in Json config file: ', token);  return [false, null] }
+    const isDown = (priceOne, priceTwo) => priceOne <= priceTwo
+    return checkAlert(token, tokenAlerts, isDown, "DOWN")
+  }
 
-    const firstIncompleteAlert = tokenAlerts.find(alert => !alert.completed)
-    if(firstIncompleteAlert) { //if there is incomplete alert found (otherwise it will be undefined value)
+  function alertOnChange(token, isAlertActive, tokenAlert, alertType) {
+    if (isAlertActive) {
       const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-      console.log(`checkAlert : First incomplete alert DOWN : ${firstIncompleteAlert} for token ${token.name}, with current price: ${usdTokenPrice}`)
-      if(usdTokenPrice <= parseFloat(firstIncompleteAlert.value)) return [true, firstIncompleteAlert]
+      const msg = `Token alert: ${token.name} ${alertType} ${tokenAlert.value}$, price: ${usdTokenPrice}$`
+      console.log(msg)
+      sendTelegramMessage(msg)
+      tokenAlert.completed = true
     }
-    return [false, null]
   }
 
   function updateAlerts() {
@@ -144,43 +138,20 @@ function App() {
       tokens.forEach(token => {
         const [isAlertActiveUp, tokenAlertUp] = checkAlertUp(token)
         const [isAlertActiveDown, tokenAlertDown] = checkAlertDown(token)
-        if (isAlertActiveUp) {
-          const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-          const msg = `Token alert: ${token.name} ${tokenAlertUp.type} ${tokenAlertUp.value}, price: ${usdTokenPrice}`
-          console.log(msg)
-          sendTelegramMessage(msg)
-          tokenAlertUp.completed = true
-        }
-        if (isAlertActiveDown) {
-          const usdTokenPrice = (parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)
-          const msg = `Token alert: ${token.name} ${tokenAlertDown.type} ${tokenAlertDown.value}, price: ${usdTokenPrice}`
-          console.log(msg)
-          sendTelegramMessage(msg)
-          tokenAlertDown.completed = true
-        }
+        alertOnChange(token, isAlertActiveUp, tokenAlertUp, 'UP')
+        alertOnChange(token, isAlertActiveDown, tokenAlertDown, 'DOWN')
       })
     }
   }
 
-  function printAlertUp(alert) {
+  function printAlert(alert, colorAlert) {
     return (
-      <div style={{color: 'green', float: 'left'}}>
+      <div style={{color: colorAlert, float: 'left'}}>
         { alert.completed
             ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
             : <b>{alert.value}&nbsp;&nbsp;</b>
         }
       </div>
-    )
-  }
-
-  function printAlertDown(alert) {
-    return (
-        <div style={{color: 'red', float: 'left'}}>
-          { alert.completed
-              ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
-              : <b>{alert.value}&nbsp;&nbsp;</b>
-          }
-        </div>
     )
   }
 
@@ -190,18 +161,8 @@ function App() {
       .map(tokenInfo => {
         return(
           <>
-            {
-              tokenInfo.alertsUp.map(alert => {
-                console.log(`print alert for token: ${tokenInfo.name}, value ${alert.value}  completed : ${alert.completed}`)
-                return printAlertUp(alert)
-              })
-            }
-            {
-              tokenInfo.alertsDown.map(alert => {
-                console.log(`print alert for token: ${tokenInfo.name}, value ${alert.value}  completed : ${alert.completed}`)
-                return printAlertDown(alert)
-              })
-            }
+            { tokenInfo.alertsUp.map(alert => printAlert(alert, 'green')) }
+            { tokenInfo.alertsDown.map(alert => printAlert(alert, 'red')) }
           </>
         )
       })
