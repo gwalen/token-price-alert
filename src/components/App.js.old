@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react'
 import './App.css'
+
 import { ApolloClient } from 'apollo-client'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { HttpLink } from 'apollo-link-http'
 import { useQuery } from '@apollo/react-hooks'
 import gql from 'graphql-tag'
-import { Card, CardHeader, CardBody, Row, Col } from 'reactstrap'
-import { TelegramClient } from 'messaging-api-telegram'
+// import tokenJson from '../data/tokens.json'
+import tokenJson from '../data/tokens_draft_v3.json'
 
-import { AlertTable} from './AlertTable'
-import tokenJson from '../data/tokens.json'
+import { Card, CardHeader, CardBody, Row, Col, Table } from 'reactstrap'
+import { TelegramClient } from 'messaging-api-telegram'
 
 
 export const client = new ApolloClient({
@@ -31,6 +32,8 @@ const MULTI_TOKEN_QUERY = gql`
     }
   }
 `
+
+
 const ETH_PRICE_QUERY = gql`
   query bundles {
     bundles(where: {id: "1"}) {
@@ -39,11 +42,15 @@ const ETH_PRICE_QUERY = gql`
   }
 `
 
-const chatId = process.env.REACT_APP_TELEGRAM_BOT_CHAT_ID
+const dexToolsLink = 'https://www.dextools.io/app/uniswap/pair-explorer/'
+
+//TODO: move to environment vars
+const chatId =-419695018
 const telegramClient = new TelegramClient({
-  accessToken: process.env.REACT_APP_TELEGRAM_BOT_ACCESS_TOKEN,
+  accessToken: '1391851877:AAHPd3W7_tgLoCZ3i-sG8fbXZew_rmBD5Rw',
 })
 
+//TODO: move to some sort of initialization function or hook (useEffect ?)
 telegramClient.getWebhookInfo().catch((error) => {
   console.log(error) // formatted error message
   console.log(error.stack) // error stack trace
@@ -74,7 +81,7 @@ function App() {
   const tokens = multiTokensData && multiTokensData.tokens
   const ethPriceInUsd = ethPriceData && ethPriceData.bundles[0].ethPrice
 
-  // console.log('tokenData ', tokens)
+  console.log('tokenData ', tokens)
   refreshCounter.current++
   updateAlerts()
 
@@ -84,6 +91,11 @@ function App() {
     telegramClient.sendMessage(chatId, message).then(() => {
       console.log('message sent', message);
     });
+  }
+
+  function findDexToolsLink(tokenAddress) {
+    const { dexToolsLinkSuffix: linkSuffix } = tokenJson.find(tokenInfo => tokenInfo.address === tokenAddress)
+    return `${dexToolsLink}${linkSuffix}`
   }
 
   function checkAlert(token, tokenAlerts, compareFunc, alertType) {
@@ -132,6 +144,46 @@ function App() {
     }
   }
 
+  function printAlert(alert, colorAlert) {
+    return (
+      <div style={{color: colorAlert, float: 'left'}}>
+        { alert.completed
+            ? <b><s>{alert.value}&nbsp;&nbsp;</s></b>
+            : <b>{alert.value}&nbsp;&nbsp;</b>
+        }
+      </div>
+    )
+  }
+
+  function printAlerts(tokenAddress) {
+    return tokenJson
+      .filter(tokenInfo => tokenInfo.address === tokenAddress)  //TODO: find would be better coz filter returns an array (hence double map below)
+      .map(tokenInfo => {
+        return(
+          <>
+            { tokenInfo.alertsUp.map(alert => printAlert(alert, 'green')) }
+            { tokenInfo.alertsDown.map(alert => printAlert(alert, 'red')) }
+          </>
+        )
+      })
+  }
+
+  function generateTokenInfo() {
+    return tokens.map((token) => {
+      return (
+        <>
+          <tr>
+            <td>{token.name}</td>
+            <td><b>{(parseFloat(ethPriceInUsd) * parseFloat(token.derivedETH)).toFixed(4)}</b></td>
+            <td>{parseFloat(token.derivedETH).toFixed(6)}</td>
+            <td>{printAlerts(token.id)}</td>
+            <td><a href={`${findDexToolsLink(token.id)}`} target="_blank"><b>dex</b></a></td>
+          </tr>
+        </>
+      )
+    })
+  }
+
   /******** render ********/
 
   return (
@@ -150,8 +202,23 @@ function App() {
                 <div style={{float: 'right', marginRight: '0.8rem'}}><b>Eth price : {parseFloat(ethPriceInUsd).toFixed(2)}</b></div>
               </CardHeader>
               <CardBody>
-                <AlertTable multiTokensLoading={multiTokensLoading} ethPriceInUsd={ethPriceInUsd} tokens={tokens} tokenJson={tokenJson}>
-                </AlertTable>
+                <Table responsive>
+                  <thead className="text-primary">
+                    <tr>
+                      <th>Token name</th>
+                      <th>Token price USD</th>
+                      <th>Token price ETH</th>
+                      <th>Token alerts</th>
+                      <th>dexTools</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    { multiTokensLoading
+                        ?  <tr><td>"Lading multi-tokens.."</td></tr>
+                        :  generateTokenInfo()
+                    }
+                  </tbody>
+                </Table>
               </CardBody>
             </Card>
           </Col>

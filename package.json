@@ -1,8 +1,8 @@
 {
   "name": "token-alert",
   "version": "0.1.0",
-  "description": "token alter",
-  "author": "gregory",
+  "description": "token alert",
+  "author": "GregoryWhale",
   "main": "index.js",
   "dependencies": {
     "@apollo/react-hooks": "^3.1.5",
@@ -19,6 +19,7 @@
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "chai-bignumber": "3.0.0",
+    "dotenv": "^8.2.0",
     "graphql": "^14.6.0",
     "graphql-tag": "^2.11.0",
     "messaging-api-telegram": "^1.0.1",
