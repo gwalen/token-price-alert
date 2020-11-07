@@ -11,6 +11,8 @@
 # production
 /build
 
+# ide
+/.idea
 
 # template
 /src/template
