@@ -2,15 +2,15 @@
 
 ### Installation & configuration guide 
 
-#####1. install npm and node.js
+#### 1. install npm and node.js
 
 https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
 
-#####2. download Token alert app
+#### 2. download Token alert app
 
 git clone or download zip from repo
 
-#####3. configure telegram bot
+#### 3. configure telegram bot
 
 a) create a new bot and copy its access token as described in this tutorial
 https://core.telegram.org/bots#6-botfather
@@ -34,11 +34,11 @@ f) paste chatId (from d)) and bot access token (from a)) to application variable
 Open `.env` file in app main directory replace `REACT_APP_TELEGRAM_BOT_CHAT_ID` value with your `chatId` and replace `REACT_APP_TELEGRAM_BOT_ACCESS_TOKEN`
 with `bot access token`
     
-#####4. configure alerts 
+#### 4. configure alerts 
 
 Modify file `/src/data/tokens.json`. 
 
-#####5. turn on/off sounds 
+#### 5. turn on/off sounds 
 
 Open `.env` file in app main directory and sett `on/off` value for `REACT_APP_PLAY_SOUND`
 
